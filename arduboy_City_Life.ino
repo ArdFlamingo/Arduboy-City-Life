@@ -13,12 +13,9 @@ uint8_t menuItemsMenu = 4;
 uint8_t menuItemsMenu2 = 4;
 uint8_t GameStart = 1;
 bool sfxToggle = true;
-uint32_t money = 50;
+uint32_t money = 1000;
 
 uint8_t dice = 0;
-uint8_t didDiceRoll = 0;
-uint32_t delayDice = 0;
-bool diceRestart = false;
 
 uint8_t cursorIndexTitle = 0;
 uint8_t cursorTitleX = 88;
@@ -32,6 +29,23 @@ uint8_t cursorIndexMenu2 = 0;
 uint8_t cursorMenu2X = 88;
 uint8_t cursorMenu2Y = 25;
 
+constexpr Point foodOptions[] { {2, 24}, {30, 22}, {50, 8}, {66, 35}, {100, 48}, {110, 5}, { 15, 50}, {80, 15}, {107, 28} };
+
+uint8_t playerX = 40;
+uint8_t playerY = 45;
+uint8_t customerOrder = 0;
+
+  Rect Player (playerX, playerY, 5, 5);
+  Rect FriedChicken (foodOptions[0].x, foodOptions[0].y, 8, 8);
+  Rect Lettuce (foodOptions[1].x, foodOptions[1].y, 8, 8);
+  Rect Onion (foodOptions[2].x, foodOptions[2].y, 8, 8);
+  Rect Buns (foodOptions[3].x, foodOptions[3].y, 8, 8);
+  Rect Patty (foodOptions[4].x, foodOptions[4].y, 8, 8);
+  Rect Soda (foodOptions[5].x, foodOptions[5].y, 8, 8);
+  Rect Fries (foodOptions[6].x, foodOptions[6].y, 8, 8);
+  Rect Pizza (foodOptions[7].x, foodOptions[7].y, 8, 8);
+  Rect Tomato (foodOptions[8].x, foodOptions[8].y, 8, 8);
+
 enum class GameState : uint8_t {
   GameTitle,
   GameOptions,
@@ -44,7 +58,6 @@ enum class GameState : uint8_t {
   GameMenu2,
   GameBus,
   GameDice,
-  GameDiceDelay,
   GameBank,
   GameProperties,
 };
@@ -55,6 +68,7 @@ void setup()
 {
   arduboy.begin();
   arduboy.initRandomSeed();
+  arduboy.setFrameRate(50);
 }
 
 void loop()
@@ -89,6 +103,7 @@ void gameLoop()
       break;
 
     case GameState::GameWork:
+     workScreen();
      break;
 
     case GameState::GameBuy:
@@ -109,10 +124,6 @@ void gameLoop()
 
     case GameState::GameDice:
      diceScreen();
-     break;
-
-    case GameState::GameDiceDelay:
-     diceScreenDelay();
      break;
 
     case GameState::GameBank:
@@ -254,6 +265,10 @@ void menuScreen() {
   if (arduboy.justPressed(B_BUTTON)) {
     gameState = GameState::GameTitle;
   }
+  if (arduboy.justPressed(A_BUTTON) && cursorIndexMenu == 0) {
+    gameState = GameState::GameWork;
+  }
+  
 
   soundExit();
 
@@ -365,54 +380,99 @@ void soundExit() {
 }
 
 void diceScreen() {
+  
+  if (arduboy.justPressed(A_BUTTON)) {
+  if (money >= 100) {
+  dice = random(1, 7);
 
- if (arduboy.justPressed(A_BUTTON) && didDiceRoll == 0 && diceRestart == false) {
-  diceRandom();
-  delayDice = (millis() + (4 * 1000));
-  didDiceRoll = 1;
-  diceRestart == true;
- }
-
- if (dice < 4 && dice > 0) {
+ if (dice == 1 || dice == 2 || dice == 3 || dice == 4) {
   money = money / 2;
  }
 
- if (dice > 3 && dice < 7) {
+ if (dice == 5 || dice == 6) {
   money = money * 2;
  }
+ 
+}
 
- if (didDiceRoll == 1) {
-  gameState = GameState::GameDiceDelay;
+}
+
+printMoney();
+drawDiceImg();
+
+arduboy.setCursor(0, 54);
+arduboy.print(F("You Rolled "));
+arduboy.print(dice);
+
+if (arduboy.justPressed(B_BUTTON)) {
+  gameState = GameState::GameMenu2;
+  soundExit();
+}
+
+}
+
+void drawDiceImg() {
+  Sprites::drawOverwrite(80, 5, diceimg, 0);
+}
+
+void workScreen() {
+
+if (arduboy.pressed(UP_BUTTON)) {
+    playerY -= 1;
+  }
+
+  if (arduboy.pressed(DOWN_BUTTON)) {
+    playerY += 1;
+  }
+
+  if (arduboy.pressed(RIGHT_BUTTON)) {
+    playerX += 1;
+  }
+
+  if (arduboy.pressed(LEFT_BUTTON)) {
+    playerX -= 1;
+  }
+
+  if (arduboy.collide(Player, FriedChicken)) {
+    money = money + 1000;
+  }
+
+  int x = 72;
+  int y = 50;
+
+ customerOrder = 1;
+
+ if (customerOrder == 1) {
+  if (arduboy.collide(Player, FriedChicken)) {
+    money += 50;
+  }
  }
+ 
+ drawWorkFood();
+ drawWorkPlayer();
+ printMoney();
 
-  printMoney();
+  
+
+ if (arduboy.justPressed(B_BUTTON)) {
+  gameState = GameState::GameMenu;
+  soundExit();
+ }
   
 }
 
-void diceScreenDelay() {
-
-  uint32_t currentDice = millis();
-
-  if (currentDice >= delayDice) {
-    didDiceRoll = 0;
-    gameState = GameState::GameDice;
-    diceRandom();
-  }
-
-  int remainingSecondsDice = ((delayDice - currentDice) / 1000);
-
-  arduboy.setCursor(-1, 56);
-  arduboy.print("5 Mins Until Next Roll");
-
-  printMoney();
+void drawWorkFood() {
+  Sprites::drawOverwrite(foodOptions[0].x, foodOptions[0].y, friedchicken, 0);
+  Sprites::drawOverwrite(foodOptions[1].x, foodOptions[1].y, lettuce, 0);
+  Sprites::drawOverwrite(foodOptions[2].x, foodOptions[2].y, onion, 0);
+  Sprites::drawOverwrite(foodOptions[3].x, foodOptions[3].y, buns, 0);
+  Sprites::drawOverwrite(foodOptions[4].x, foodOptions[4].y, patty, 0);
+  Sprites::drawOverwrite(foodOptions[5].x, foodOptions[5].y, soda, 0);
+  Sprites::drawOverwrite(foodOptions[6].x, foodOptions[6].y, fries, 0);
+  Sprites::drawOverwrite(foodOptions[7].x, foodOptions[7].y, pizza, 0);
+  Sprites::drawOverwrite(foodOptions[8].x, foodOptions[8].y, tomato, 0);
 }
 
-void diceRandom() {
-  if (diceRestart == false) {
-    dice = random(1, 7);
-  }
-
-  if (diceRestart == true) {
-    dice = random(1, 7);
-  }
+void drawWorkPlayer() {
+  Sprites::drawOverwrite(playerX, playerY, workcursor, 0);
 }
