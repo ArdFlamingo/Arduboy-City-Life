@@ -35,7 +35,6 @@ uint8_t playerX = 40;
 uint8_t playerY = 45;
 uint8_t customerOrder = 0;
 
-  Rect Player (playerX, playerY, 5, 5);
   Rect FriedChicken (foodOptions[0].x, foodOptions[0].y, 8, 8);
   Rect Lettuce (foodOptions[1].x, foodOptions[1].y, 8, 8);
   Rect Onion (foodOptions[2].x, foodOptions[2].y, 8, 8);
@@ -69,6 +68,7 @@ void setup()
   arduboy.begin();
   arduboy.initRandomSeed();
   arduboy.setFrameRate(50);
+  customerOrder = random(1, 2);
 }
 
 void loop()
@@ -360,6 +360,8 @@ void creditsScreen() {
   arduboy.print(F("Ard_Flamingo"));
   arduboy.print(F("\n\n"));
   arduboy.print(F("Pharap"));
+  arduboy.print(F("\n\n"));
+  arduboy.print(F("filmote"));
 
   if (arduboy.justPressed(B_BUTTON)) {
     gameState = GameState::GameTitle;
@@ -417,7 +419,18 @@ void drawDiceImg() {
 
 void workScreen() {
 
-if (arduboy.pressed(UP_BUTTON)) {
+ bool touchedFood[4] {false, false, false, false};
+
+ if (touchedFood[0] == true && touchedFood[1] == true && touchedFood[2] == true && touchedFood[3] == true && touchedFood[4] == true) {
+  money += 150;
+  touchedFood[0] = false;
+  touchedFood[1] = false;
+  touchedFood[2] = false;
+  touchedFood[3] = false;
+  touchedFood[4] = false;
+ }
+ 
+  if (arduboy.pressed(UP_BUTTON)) {
     playerY -= 1;
   }
 
@@ -433,24 +446,73 @@ if (arduboy.pressed(UP_BUTTON)) {
     playerX -= 1;
   }
 
-  if (arduboy.collide(Player, FriedChicken)) {
-    money = money + 1000;
-  }
+ Rect playerRect = getPlayerRect();
+ 
 
-  int x = 72;
-  int y = 50;
-
- customerOrder = 1;
-
- if (customerOrder == 1) {
-  if (arduboy.collide(Player, FriedChicken)) {
+ if (arduboy.collide(playerRect, FriedChicken) && customerOrder == 1) {
+  if (arduboy.justPressed(A_BUTTON)) {
     money += 50;
+    customerOrder = random (1, 6);
+  }
+ }
+
+ if (arduboy.collide(playerRect, Pizza) && customerOrder == 2) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrder = random (1, 6);
+  }
+ }
+
+ if (arduboy.collide(playerRect, Fries) && customerOrder == 3) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrder = random (1, 6);
+  }
+ }
+
+ if (arduboy.collide(playerRect, Soda) && customerOrder == 4) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrder = random (1, 6);
+  }
+ }
+
+ if (arduboy.collide(playerRect, Buns) && customerOrder == 5) {
+  if (arduboy.pressed(A_BUTTON)) {
+    touchedFood[0] = true;
+  }
+ }
+
+ if (arduboy.collide(playerRect, Patty) && customerOrder == 5) {
+  if (arduboy.pressed(A_BUTTON)) {
+    touchedFood[1] = true;
+  }
+ }
+
+ if (arduboy.collide(playerRect, Lettuce) && customerOrder == 5) {
+  if (arduboy.pressed(A_BUTTON)) {
+    touchedFood[2] = true;
+  }
+ }
+
+ if (arduboy.collide(playerRect, Onion) && customerOrder == 5) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    touchedFood[3] = true;
+  }
+ }
+
+ if (arduboy.collide(playerRect, Tomato) && customerOrder == 5) {
+  if (arduboy.pressed(A_BUTTON)) {
+    touchedFood[4] = true;
   }
  }
  
  drawWorkFood();
  drawWorkPlayer();
  printMoney();
+
+ arduboy.setCursor(0, 58);
+ arduboy.print(customerOrder);
 
   
 
@@ -475,4 +537,15 @@ void drawWorkFood() {
 
 void drawWorkPlayer() {
   Sprites::drawOverwrite(playerX, playerY, workcursor, 0);
+}
+
+Rect getPlayerRect() {
+
+    Rect playerRect;
+    playerRect.x = playerX;
+    playerRect.y = playerY;
+    playerRect.width = 5;
+    playerRect.height = 5;
+
+    return playerRect;
 }
