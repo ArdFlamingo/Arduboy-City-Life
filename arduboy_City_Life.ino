@@ -4,16 +4,19 @@
 #include <EEPROM.h>
 #include "sprites.h"
 #include "tones.h"
+#include "src/fonts/Font4x6.h"
 
 Arduboy2 arduboy;
 ArduboyTones sound(arduboy.audio.enabled);
+Font4x6 font4x6 = Font4x6();
 
 uint8_t menuItemsTitle = 3;
 uint8_t menuItemsMenu = 4;
 uint8_t menuItemsMenu2 = 4;
 uint8_t GameStart = 1;
 bool sfxToggle = true;
-uint32_t money = 1000;
+uint32_t money = 120000;
+uint32_t moneyBank = 100;
 
 uint8_t dice = 0;
 
@@ -29,21 +32,27 @@ uint8_t cursorIndexMenu2 = 0;
 uint8_t cursorMenu2X = 88;
 uint8_t cursorMenu2Y = 25;
 
-constexpr Point foodOptions[] { {2, 24}, {30, 22}, {50, 8}, {66, 35}, {100, 48}, {110, 5}, { 15, 50}, {80, 15}, {107, 28} };
+bool isPropertyBought = false;
+uint32_t propertyTimer = 0;
+
+constexpr Point foodOptions[] { {2, 24}, {30, 22}, {50, 8}, {66, 35}, {95, 45}, {110, 5}, { 15, 45}, {80, 15}, {107, 28} };
 
 uint8_t playerX = 40;
 uint8_t playerY = 45;
 uint8_t customerOrder = 0;
 
+
+
+
   Rect FriedChicken (foodOptions[0].x, foodOptions[0].y, 8, 8);
-  Rect Lettuce (foodOptions[1].x, foodOptions[1].y, 8, 8);
-  Rect Onion (foodOptions[2].x, foodOptions[2].y, 8, 8);
-  Rect Buns (foodOptions[3].x, foodOptions[3].y, 8, 8);
-  Rect Patty (foodOptions[4].x, foodOptions[4].y, 8, 8);
+  Rect Donut (foodOptions[1].x, foodOptions[1].y, 8, 8);
+  Rect Burger (foodOptions[2].x, foodOptions[2].y, 8, 8);
+  Rect Milk (foodOptions[3].x, foodOptions[3].y, 8, 8);
+  Rect Hotdog (foodOptions[4].x, foodOptions[4].y, 8, 8);
   Rect Soda (foodOptions[5].x, foodOptions[5].y, 8, 8);
   Rect Fries (foodOptions[6].x, foodOptions[6].y, 8, 8);
   Rect Pizza (foodOptions[7].x, foodOptions[7].y, 8, 8);
-  Rect Tomato (foodOptions[8].x, foodOptions[8].y, 8, 8);
+  Rect Juice (foodOptions[8].x, foodOptions[8].y, 8, 8);
 
 enum class GameState : uint8_t {
   GameTitle,
@@ -59,6 +68,7 @@ enum class GameState : uint8_t {
   GameDice,
   GameBank,
   GameProperties,
+  GamePropertiesBought,
 };
 
 GameState gameState = GameState::GameTitle;
@@ -67,8 +77,8 @@ void setup()
 {
   arduboy.begin();
   arduboy.initRandomSeed();
-  arduboy.setFrameRate(50);
-  customerOrder = random(1, 2);
+  arduboy.setFrameRate(55);
+  customerOrder = random(1, 10);
 }
 
 void loop()
@@ -127,11 +137,15 @@ void gameLoop()
      break;
 
     case GameState::GameBank:
-
+     bankScreen();
      break;
 
     case GameState::GameProperties:
+     propertiesScreen();
+     break;
 
+    case GameState::GamePropertiesBought:
+     propertiesBoughtScreen();
      break;
 
   }
@@ -319,6 +333,18 @@ void menu2Screen() {
     gameState = GameState::GameDice;
   }
 
+  if (arduboy.justPressed(A_BUTTON) && cursorIndexMenu2 == 2) {
+    gameState = GameState::GameBank;
+  }
+
+  if (arduboy.justPressed(A_BUTTON) && cursorIndexMenu2 == 3 && isPropertyBought == false) {
+    gameState = GameState::GameProperties;
+  }
+
+  if (arduboy.justPressed(A_BUTTON) && cursorIndexMenu2 == 3 && isPropertyBought == true) {
+    gameState = GameState::GamePropertiesBought;
+  }
+
   soundExit();
   soundEnter();
 }
@@ -419,17 +445,6 @@ void drawDiceImg() {
 
 void workScreen() {
 
- bool touchedFood[4] {false, false, false, false};
-
- if (touchedFood[0] == true && touchedFood[1] == true && touchedFood[2] == true && touchedFood[3] == true && touchedFood[4] == true) {
-  money += 150;
-  touchedFood[0] = false;
-  touchedFood[1] = false;
-  touchedFood[2] = false;
-  touchedFood[3] = false;
-  touchedFood[4] = false;
- }
- 
   if (arduboy.pressed(UP_BUTTON)) {
     playerY -= 1;
   }
@@ -452,58 +467,72 @@ void workScreen() {
  if (arduboy.collide(playerRect, FriedChicken) && customerOrder == 1) {
   if (arduboy.justPressed(A_BUTTON)) {
     money += 50;
-    customerOrder = random (1, 6);
+    customerOrderRandom();
+    soundEnter();
   }
  }
 
  if (arduboy.collide(playerRect, Pizza) && customerOrder == 2) {
   if (arduboy.justPressed(A_BUTTON)) {
     money += 50;
-    customerOrder = random (1, 6);
+    customerOrderRandom();
+    soundEnter();
   }
  }
 
  if (arduboy.collide(playerRect, Fries) && customerOrder == 3) {
   if (arduboy.justPressed(A_BUTTON)) {
     money += 50;
-    customerOrder = random (1, 6);
+    customerOrderRandom();
+    soundEnter();
   }
  }
 
  if (arduboy.collide(playerRect, Soda) && customerOrder == 4) {
   if (arduboy.justPressed(A_BUTTON)) {
     money += 50;
-    customerOrder = random (1, 6);
+    customerOrderRandom();
+    soundEnter();
   }
  }
 
- if (arduboy.collide(playerRect, Buns) && customerOrder == 5) {
-  if (arduboy.pressed(A_BUTTON)) {
-    touchedFood[0] = true;
-  }
- }
-
- if (arduboy.collide(playerRect, Patty) && customerOrder == 5) {
-  if (arduboy.pressed(A_BUTTON)) {
-    touchedFood[1] = true;
-  }
- }
-
- if (arduboy.collide(playerRect, Lettuce) && customerOrder == 5) {
-  if (arduboy.pressed(A_BUTTON)) {
-    touchedFood[2] = true;
-  }
- }
-
- if (arduboy.collide(playerRect, Onion) && customerOrder == 5) {
+ if (arduboy.collide(playerRect, Milk) && customerOrder == 5) {
   if (arduboy.justPressed(A_BUTTON)) {
-    touchedFood[3] = true;
+    money += 50;
+    customerOrderRandom();
+    soundEnter();
   }
  }
 
- if (arduboy.collide(playerRect, Tomato) && customerOrder == 5) {
-  if (arduboy.pressed(A_BUTTON)) {
-    touchedFood[4] = true;
+ if (arduboy.collide(playerRect, Juice) && customerOrder == 6) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrderRandom();
+    soundEnter();
+  }
+ }
+
+ if (arduboy.collide(playerRect, Donut) && customerOrder == 7) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrderRandom();
+    soundEnter();
+  }
+ }
+
+ if (arduboy.collide(playerRect, Burger) && customerOrder == 8) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrderRandom();
+    soundEnter();
+  }
+ }
+
+ if (arduboy.collide(playerRect, Hotdog) && customerOrder == 9) {
+  if (arduboy.justPressed(A_BUTTON)) {
+    money += 50;
+    customerOrderRandom();
+    soundEnter();
   }
  }
  
@@ -511,8 +540,9 @@ void workScreen() {
  drawWorkPlayer();
  printMoney();
 
- arduboy.setCursor(0, 58);
- arduboy.print(customerOrder);
+ font4x6.setCursor(0, 56);
+ font4x6.print(F("Customer Orders Number:"));
+ font4x6.print(customerOrder);
 
   
 
@@ -525,14 +555,14 @@ void workScreen() {
 
 void drawWorkFood() {
   Sprites::drawOverwrite(foodOptions[0].x, foodOptions[0].y, friedchicken, 0);
-  Sprites::drawOverwrite(foodOptions[1].x, foodOptions[1].y, lettuce, 0);
-  Sprites::drawOverwrite(foodOptions[2].x, foodOptions[2].y, onion, 0);
-  Sprites::drawOverwrite(foodOptions[3].x, foodOptions[3].y, buns, 0);
-  Sprites::drawOverwrite(foodOptions[4].x, foodOptions[4].y, patty, 0);
+  Sprites::drawOverwrite(foodOptions[1].x, foodOptions[1].y, donut, 0);
+  Sprites::drawOverwrite(foodOptions[2].x, foodOptions[2].y, burger, 0);
+  Sprites::drawOverwrite(foodOptions[3].x, foodOptions[3].y, milk, 0);
+  Sprites::drawOverwrite(foodOptions[4].x, foodOptions[4].y, hotdog, 0);
   Sprites::drawOverwrite(foodOptions[5].x, foodOptions[5].y, soda, 0);
   Sprites::drawOverwrite(foodOptions[6].x, foodOptions[6].y, fries, 0);
   Sprites::drawOverwrite(foodOptions[7].x, foodOptions[7].y, pizza, 0);
-  Sprites::drawOverwrite(foodOptions[8].x, foodOptions[8].y, tomato, 0);
+  Sprites::drawOverwrite(foodOptions[8].x, foodOptions[8].y, juice, 0);
 }
 
 void drawWorkPlayer() {
@@ -548,4 +578,101 @@ Rect getPlayerRect() {
     playerRect.height = 5;
 
     return playerRect;
+}
+
+void customerOrderRandom() {
+  customerOrder = random (1, 10);
+}
+
+void bankScreen() {
+
+  if (arduboy.justPressed(A_BUTTON) && money > 0) {
+    money -= 50;
+    moneyBank += 50;
+    soundEnter();
+  }
+
+  if (arduboy.justPressed(B_BUTTON) && moneyBank > 0) {
+    moneyBank -= 50;
+    money += 50;
+    soundEnter();
+  }
+
+  if (arduboy.justPressed(UP_BUTTON) && DOWN_BUTTON) {
+    gameState = GameState::GameMenu2;
+    soundExit();
+  }
+
+  printMoney();
+  drawBankImg();
+  arduboy.setCursor(0, 56);
+  arduboy.print(F("Account Ballance:"));
+  arduboy.print(moneyBank);
+}
+
+void drawBankImg() {
+  Sprites::drawOverwrite (80, 5, bankimg, 0);
+}
+
+void propertiesScreen() {
+
+    printMoney();
+    drawPropertiesImg(); 
+
+    arduboy.setCursor(0, 48);
+    arduboy.print(F("One Property For Sale:"));
+    arduboy.print(F("\n"));
+    arduboy.print(F("174 Wallyflair Avenue"));
+    arduboy.setCursor(0, 35);
+    arduboy.print(F("A = Buy"));
+
+    if (arduboy.justPressed(B_BUTTON)) {
+    gameState = GameState::GameMenu2;
+    soundExit();
+  }   
+    
+    if (arduboy.justPressed(A_BUTTON) && money >= 120000) {
+    isPropertyBought = true;
+    money -= 120000;
+    gameState = GameState::GamePropertiesBought;
+    soundEnter();
+    PropertyTimer();
+    }
+  }
+
+
+
+
+void drawPropertiesImg() {
+  Sprites::drawOverwrite(80, 5, houseimg, 0);
+}
+
+void propertiesBoughtScreen() {
+
+  printMoney();
+  drawPropertiesImg();
+
+  arduboy.setCursor(-1, 48);
+  arduboy.print(F("Property Sold For Rent"));
+  arduboy.print(F("\n"));
+  arduboy.print(F("174 Wallyflair Avenue"));
+  arduboy.setCursor(0, 35);
+  arduboy.print(F("$1000/Min"));
+
+  if (arduboy.justPressed(B_BUTTON)) {
+    gameState = GameState::GameMenu2;
+    soundExit();
+  }
+}
+
+void PropertyTimer() {
+    if (isPropertyBought == true) {
+  propertyTimer = (millis() + (1 * 1000));
+
+  uint32_t propertyTimerCurrent = millis();
+
+  if (propertyTimerCurrent >= propertyTimer) {
+    money += 50;
+  }
+  }
 }
