@@ -38,6 +38,8 @@ uint32_t lotteryTimer = 0;
 
 constexpr Point foodOptions[] { {2, 24}, {30, 22}, {50, 8}, {66, 35}, {95, 45}, {110, 5}, { 15, 45}, {80, 15}, {107, 28} };
 
+constexpr uint16_t initialised_eeprom = 1234; // Just a unique number .. doesn't mean anything.
+
 uint8_t playerX = 40;
 uint8_t playerY = 45;
 uint8_t customerOrder = 0;
@@ -76,6 +78,16 @@ struct SaveData {
   uint32_t moneyBank = 0;
   bool isPropertyBought = false;
   uint8_t ticketsOwned = 0;
+  uint16_t isInitialised = 0;
+
+  void reset() {
+    this->money = 99;
+    this->moneyBank = 0;
+    this->isPropertyBought = false;
+    this->ticketsOwned = 0;
+    this->isInitialised = initialised_eeprom;
+  }
+
 };
 
 SaveData saveData;
@@ -93,6 +105,12 @@ void setup()
   ticketUse = random(1, 26);
 
   EEPROM.get(EEPROM_STORAGE_SPACE_START_ARDUBOY, saveData);
+
+  if (saveData.isInitialised != initialised_eeprom) {
+    saveData.reset();
+    EEPROM.put(EEPROM_STORAGE_SPACE_START_ARDUBOY, saveData);
+  }
+
 }
 
 void loop()
